@@ -11,7 +11,6 @@ from itemadapter import ItemAdapter
 class JobAdPipeline:
     def process_item(self, item, spider):
         breakpoint()
-        breakpoint()
         item.save()
 
         return item
