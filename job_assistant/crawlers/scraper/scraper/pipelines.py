@@ -1,0 +1,1 @@
+# Scrapy pipelines are not used. Instead we use django command to save scraped JobAds to the DB

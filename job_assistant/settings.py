@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     "rest_framework",
 
     "job_assistant.crawlers",
-    "job_assistant.scraper",
 ]
 
 MIDDLEWARE = [
