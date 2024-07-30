@@ -18,11 +18,17 @@ class DevBgSpider(scrapy.Spider):
     def parse_jobs(self, response):
         # TODO Change xpaths to use contains, so it does not brake when there are more classes
         title = response.xpath('//h1[@class="job-title ab-title-placeholder ab-cb-title-placeholder"]/text()').get().strip()
-        body = response.xpath('//div[@class="job_description"]').get()
+        
+        body = response.xpath('//div[@class="job_description"]').get() #TODO: this can be empty if custom js is used
+        if not body:
+            iframe_src = response.xpath('//iframe[@id="custom-job-design"]/@src').get()
+            body = self.parse_body_iframe(iframe_src)
+
         date = response.xpath('//time/@datetime').get()
         company = response.xpath('//span[@class="company-name  "]/text()').get()
         categories = response.xpath('//div[@class="categories-wrap"]/a/text()').getall() #TODO: this saves only yhe first el of the list
         # techstack = response.xpath('//img[@class="attachment-medium size-medium"]/@title').getall()
+        #TODO: Add city
         url = response.url
 
         item = JobAdItem()
@@ -36,3 +42,7 @@ class DevBgSpider(scrapy.Spider):
         item['url'] = url
 
         yield item
+
+    def parse_body_iframe(self, src):
+        # TODO: Get body from src
+        return src
