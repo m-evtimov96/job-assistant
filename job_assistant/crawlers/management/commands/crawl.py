@@ -7,7 +7,7 @@ from scrapy.signalmanager import dispatcher
 from scrapy.utils.project import get_project_settings
 
 class Command(BaseCommand):
-    help = "Start crawling"
+    help = "Crawl all JobAds from DevBgSpider. For initial DB population only !"
 
     def handle(self, *args, **options):
         results = []
@@ -21,6 +21,10 @@ class Command(BaseCommand):
         process = CrawlerProcess(get_project_settings())
         process.crawl(DevBgSpider)
         process.start()
-
-        for result in results:
-            JobAd(**result).save()
+        # TODO: Add method for cleaning fields before saving to DB
+        JobAd.objects.bulk_create(
+            [
+                JobAd(**result)
+                for result in results
+            ]
+        )
