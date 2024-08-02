@@ -28,14 +28,14 @@ class DevBgSpider(scrapy.Spider):
         company = response.xpath('//span[@class="company-name  "]/text()').get()
         categories = response.xpath('//div[@class="categories-wrap"]/a/text()').getall() #TODO: this saves only yhe first el of the list
         # techstack = response.xpath('//img[@class="attachment-medium size-medium"]/@title').getall()
-        fully_remote = response.xpath('//span[contains(@class, "remote")]').get()
+        fully_remote = response.xpath('//span[contains(@class, "remote") and contains(@class, "bold")]').get()
         city_hybrid = response.xpath('//span[contains(@class, "hybrid")]/a/text()').get()
         if fully_remote:
             workplace = "Fully Remote"
         elif city_hybrid:
             workplace = workplace = f"{city_hybrid.strip()} - Hybrid"
         else:
-            workplace = response.xpath('//span[@class=" badge  no-padding  "]/text()').getall()[1].strip()
+            workplace = response.xpath('//div[@class="tags-wrap"]/a/span/text()').getall()[1].strip()
         url = response.url
 
         item = JobAdItem()
