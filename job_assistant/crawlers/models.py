@@ -6,4 +6,5 @@ class JobAd(models.Model):
     date = models.DateField()
     company = models.CharField(max_length=50)
     categories = models.CharField(max_length=150)
+    workplace = models.CharField(max_length=50)
     url = models.URLField()
