@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from job_assistant.crawlers.models import JobAd
+from job_assistant.crawlers.models import Category, JobAd
 from job_assistant.crawlers.scraper.scraper.spiders.dev_bg import DevBgSpider
 from scrapy import signals
 from scrapy.crawler import CrawlerProcess
@@ -22,9 +22,23 @@ class Command(BaseCommand):
         process.crawl(DevBgSpider)
         process.start()
         # TODO: Add method for cleaning fields before saving to DB
-        JobAd.objects.bulk_create(
-            [
-                JobAd(**result)
-                for result in results
-            ]
-        )
+
+        for result in results:
+            categories = handle_categories(result)
+
+            ad = JobAd(**result)
+            ad.save()
+
+            ad.categories.add(*categories)
+
+
+        # JobAd.objects.bulk_create(ads)
+
+
+# TODO: Move this to other file/ mby utils
+def handle_categories(ad):
+    categories = ad.pop("categories")
+    categories_objects = [Category(name=category.strip()) for category in categories]
+    ad_categories = Category.objects.bulk_create(categories_objects, update_conflicts=True, update_fields=['name'], unique_fields=['name'])
+
+    return ad_categories

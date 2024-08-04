@@ -9,6 +9,6 @@ class JobAdViewSet(ReadOnlyModelViewSet):
     queryset = JobAd.objects.all()
     serializer_class = JobAdSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["workplace"]
-    search_fields = ["categories"]
+    filterset_fields = ["workplace", "categories"]
+    # search_fields = ["categories"]
     ordering = ["-date"]
