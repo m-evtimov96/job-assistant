@@ -5,6 +5,9 @@ from scrapy import signals
 from scrapy.crawler import CrawlerProcess
 from scrapy.signalmanager import dispatcher
 from scrapy.utils.project import get_project_settings
+from bleach.sanitizer import Cleaner
+import html
+
 
 class Command(BaseCommand):
     help = "Crawl all JobAds from DevBgSpider. For initial DB population only !"
@@ -21,10 +24,11 @@ class Command(BaseCommand):
         process = CrawlerProcess(get_project_settings())
         process.crawl(DevBgSpider)
         process.start()
-        # TODO: Add method for cleaning fields before saving to DB
 
+        cleaner = Cleaner(tags=[], attributes=[], protocols=[], strip=True, strip_comments=True)
         for result in results:
             categories = handle_categories(result)
+            clean_body(result, cleaner)
 
             ad = JobAd(**result)
             ad.save()
@@ -35,10 +39,15 @@ class Command(BaseCommand):
         # JobAd.objects.bulk_create(ads)
 
 
-# TODO: Move this to other file/ mby utils
+# TODO: Move these funcs to other file/ mby utils
 def handle_categories(ad):
     categories = ad.pop("categories")
     categories_objects = [Category(name=category.strip()) for category in categories]
     ad_categories = Category.objects.bulk_create(categories_objects, update_conflicts=True, update_fields=['name'], unique_fields=['name'])
 
     return ad_categories
+
+def clean_body(ad, cleaner):
+    body = cleaner.clean(ad["body"])
+    body = html.unescape(body)
+    ad["body"] = body
