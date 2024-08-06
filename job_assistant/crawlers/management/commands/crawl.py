@@ -41,11 +41,12 @@ class Command(BaseCommand):
 
 # TODO: Move these funcs to other file/ mby utils
 def handle_categories(ad):
-    categories = ad.pop("categories")
-    categories_objects = [Category(name=category.strip()) for category in categories]
-    ad_categories = Category.objects.bulk_create(categories_objects, update_conflicts=True, update_fields=['name'], unique_fields=['name'])
-
-    return ad_categories
+    category_names = ad.pop("categories")
+    categories = []
+    for name in category_names:
+        category, created = Category.objects.get_or_create(name=name.strip())
+        categories.append(category)
+    return categories
 
 def clean_body(ad, cleaner):
     body = cleaner.clean(ad["body"])
