@@ -1,4 +1,5 @@
 from django.db import models
+from job_assistant.crawlers.managers import SoftDeleteManager
 
 class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -10,11 +11,30 @@ class Category(models.Model):
         return self.name
 
 
-class JobAd(models.Model):
+class SoftDeleteModel(models.Model):
+    """Soft delete model which hides the objects instead of deleting them"""
+
+    is_deleted = models.BooleanField(default=False)
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        abstract = True
+
+    def delete(self):
+        self.is_deleted = True
+        self.save()
+
+    def restore(self):
+        self.is_deleted = False
+        self.save()
+
+
+class JobAd(SoftDeleteModel):
     title = models.CharField(max_length=100)
     body = models.TextField()
     date = models.DateField()
     company = models.CharField(max_length=50)
     categories = models.ManyToManyField(Category)
-    workplace = models.CharField(max_length=50)
+    workplace = models.CharField(max_length=50) # TODO: Mby rework this to be Fk with separate model
     url = models.URLField()
