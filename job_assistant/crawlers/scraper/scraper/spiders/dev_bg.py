@@ -1,4 +1,6 @@
 import scrapy
+from datetime import datetime, timedelta
+
 
 from ..items import JobAdItem
 
@@ -8,24 +10,38 @@ class DevBgSpider(scrapy.Spider):
     allowed_domains = ["dev.bg"]
     start_urls = ["https://dev.bg/?s=&post_type=job_listing"]
 
+    def __init__(self, from_date=None, *args, **kwargs):
+        super(DevBgSpider, self).__init__(*args, **kwargs)
+        self.from_date = from_date
+        if self.from_date:
+            self.from_date = datetime.strptime(self.from_date, '%Y-%m-%d')
+        self.continue_crawling = True
+
     def parse(self, response):
+        if not self.continue_crawling:
+            return
+        
         jobs_links = response.xpath('//div[@class="inner-right listing-content-wrap"]/a/@href').getall()
         yield from response.follow_all(jobs_links, self.parse_jobs)
 
-        next_page = response.xpath('//div[@class="paggination-holder"]//a[@class="next page-numbers"]/@href').get()
-        if next_page:
-            yield response.follow(next_page, self.parse)
+        if self.continue_crawling:
+            next_page = response.xpath('//div[@class="paggination-holder"]//a[@class="next page-numbers"]/@href').get()
+            if next_page:
+                yield response.follow(next_page, self.parse)
 
     def parse_jobs(self, response):
+        date = response.xpath('//time/@datetime').get()
+        job_date = datetime.strptime(date, '%Y-%m-%d')
+        if self.from_date and job_date < self.from_date:
+            self.continue_crawling = False
+            return
+
         # TODO Change xpaths to use contains, so it does not brake when there are more classes
         title = response.xpath('//h1[@class="job-title ab-title-placeholder ab-cb-title-placeholder"]/text()').get().strip()
-        
         body = response.xpath('//div[@class="job_description"]').get() #TODO: this can be empty if custom js is used
         if not body:
             iframe_src = response.xpath('//iframe[@id="custom-job-design"]/@src').get()
             body = self.parse_body_iframe(iframe_src)
-
-        date = response.xpath('//time/@datetime').get()
         company = response.xpath('//span[@class="company-name  "]/text()').get()
         categories = response.xpath('//div[@class="categories-wrap"]/a/text()').getall() #TODO: this saves only yhe first el of the list
         # techstack = response.xpath('//img[@class="attachment-medium size-medium"]/@title').getall()
@@ -34,7 +50,7 @@ class DevBgSpider(scrapy.Spider):
         if fully_remote:
             workplace = "Fully Remote"
         elif city_hybrid:
-            workplace = workplace = f"{city_hybrid.strip()} - Hybrid"
+            workplace = f"{city_hybrid.strip()} - Hybrid"
         else:
             workplace = response.xpath('//div[@class="tags-wrap"]/a/span/text()').getall()[1].strip()
         url = response.url
