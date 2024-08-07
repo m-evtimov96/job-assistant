@@ -12,8 +12,9 @@ class DevBgSpider(scrapy.Spider):
         jobs_links = response.xpath('//div[@class="inner-right listing-content-wrap"]/a/@href').getall()
         yield from response.follow_all(jobs_links, self.parse_jobs)
 
-        next_page = response.xpath('//div[@class="paggination-holder"]//a[@href]').getall()
-        yield from response.follow_all(next_page, self.parse)
+        next_page = response.xpath('//div[@class="paggination-holder"]//a[@class="next page-numbers"]/@href').get()
+        if next_page:
+            yield response.follow(next_page, self.parse)
 
     def parse_jobs(self, response):
         # TODO Change xpaths to use contains, so it does not brake when there are more classes
