@@ -31,14 +31,14 @@ class Command(BaseCommand):
         for result in results:
             categories = handle_categories(result)
             clean_body(result, cleaner)
-            ad_exists = JobAd.all_objects.get(url=result["url"])
+            ad = JobAd.all_objects.get(url=result["url"])
             # TODO: Check if ad allready exists (1/2 days old) or if exists but softdeleted and update/create accoridingly
             # TODO: Test this logic
-            if ad_exists:
-                if ad_exists.is_deleted:
-                    ad_exists.restore()
-                ad_exists.update(**result)
-                ad_exists.categories.clear()
+            if ad:
+                if ad.is_deleted:
+                    ad.restore()
+                ad.update(**result)
+                ad.categories.clear()
             else:
                 ad = JobAd(**result)
                 ad.save()
