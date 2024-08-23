@@ -1,5 +1,5 @@
 import scrapy
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 from ..items import JobAdItem
@@ -43,7 +43,7 @@ class DevBgSpider(scrapy.Spider):
             iframe_src = response.xpath('//iframe[@id="custom-job-design"]/@src').get()
             body = self.parse_body_iframe(iframe_src)
         company = response.xpath('//span[@class="company-name  "]/text()').get()
-        categories = response.xpath('//div[@class="categories-wrap"]/a/text()').getall() #TODO: this saves only yhe first el of the list
+        categories = response.xpath('//div[@class="categories-wrap"]/a/text()').getall()
         # techstack = response.xpath('//img[@class="attachment-medium size-medium"]/@title').getall()
         fully_remote = response.xpath('//span[contains(@class, "remote") and contains(@class, "bold")]').get()
         city_hybrid = response.xpath('//span[contains(@class, "hybrid")]/a/text()').get()
