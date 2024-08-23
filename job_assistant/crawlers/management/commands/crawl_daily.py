@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
-from job_assistant.crawlers.models import JobAd
+from job_assistant.crawlers.models import JobAd, Workplace
 from job_assistant.crawlers.scraper.scraper.spiders.dev_bg import DevBgSpider
-from job_assistant.crawlers.utils import handle_categories, clean_body
+from job_assistant.crawlers.utils import handle_categories, handle_technologies, clean_body
 from scrapy import signals
 from scrapy.crawler import CrawlerProcess
 from scrapy.signalmanager import dispatcher
@@ -31,6 +31,7 @@ class Command(BaseCommand):
         for result in results:
             categories = handle_categories(result)
             technologies = handle_technologies(result)
+            workplace, created = Workplace.objects.get_or_create(name=result.pop("workplace").strip())
 
             clean_body(result, cleaner)
 
@@ -42,8 +43,11 @@ class Command(BaseCommand):
                     ad.restore()
                 ad.categories.clear()
                 ad.technologies.clear()
-            else:
-                ad = JobAd(**result)
+                ad.workplace = workplace
                 ad.save()
+            else:
+                ad = JobAd(workplace=workplace, **result)
+                ad.save()
+
             ad.categories.add(*categories)
             ad.technologies.add(*technologies)
