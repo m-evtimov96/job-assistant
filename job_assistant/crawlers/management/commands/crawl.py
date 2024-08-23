@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from job_assistant.crawlers.models import JobAd
-from job_assistant.crawlers.utils import handle_categories, clean_body
+from job_assistant.crawlers.utils import handle_categories, handle_technologies, clean_body
 from job_assistant.crawlers.scraper.scraper.spiders.dev_bg import DevBgSpider
 from scrapy import signals
 from scrapy.crawler import CrawlerProcess
@@ -28,9 +28,12 @@ class Command(BaseCommand):
         cleaner = Cleaner(tags=[], attributes=[], protocols=[], strip=True, strip_comments=True)
         for result in results:
             categories = handle_categories(result)
+            technologies = handle_technologies(result)
+
             clean_body(result, cleaner)
 
             ad = JobAd(**result)
             ad.save()
 
             ad.categories.add(*categories)
+            ad.technologies.add(*technologies)
