@@ -9,6 +9,7 @@ from scrapy.utils.project import get_project_settings
 from bleach.sanitizer import Cleaner
 from datetime import datetime, timedelta
 
+# Run daily in the morning
 class Command(BaseCommand):
     help = "Crawl daily JobAds from DevBgSpider."
 
@@ -20,7 +21,6 @@ class Command(BaseCommand):
 
         dispatcher.connect(crawler_results, signal=signals.item_passed)
 
-        # TODO: Check what date to use here
         yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
 
         process = CrawlerProcess(get_project_settings())
@@ -31,13 +31,13 @@ class Command(BaseCommand):
         for result in results:
             categories = handle_categories(result)
             clean_body(result, cleaner)
-            ad = JobAd.all_objects.get(url=result["url"])
-            # TODO: Check if ad allready exists (1/2 days old) or if exists but softdeleted and update/create accoridingly
-            # TODO: Test this logic
+
+            ad = JobAd.all_objects.filter(url=result["url"])
             if ad:
+                ad.update(**result)
+                ad = ad[0]
                 if ad.is_deleted:
                     ad.restore()
-                ad.update(**result)
                 ad.categories.clear()
             else:
                 ad = JobAd(**result)
