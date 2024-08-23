@@ -44,7 +44,7 @@ class DevBgSpider(scrapy.Spider):
             body = self.parse_body_iframe(iframe_src)
         company = response.xpath('//span[@class="company-name  "]/text()').get()
         categories = response.xpath('//div[@class="categories-wrap"]/a/text()').getall()
-        # techstack = response.xpath('//img[@class="attachment-medium size-medium"]/@title').getall()
+        technologies = response.xpath('//img[@class="attachment-medium size-medium"]/@title').getall()
         fully_remote = response.xpath('//span[contains(@class, "remote") and contains(@class, "bold")]').get()
         city_hybrid = response.xpath('//span[contains(@class, "hybrid")]/a/text()').get()
         if fully_remote:
@@ -61,8 +61,7 @@ class DevBgSpider(scrapy.Spider):
         item['date'] = date
         item['company'] = company
         item['categories'] = categories
-        # TODO: Techstack does not work - Keyerror ?
-        # item['techstack'] = techstack
+        item['technologies'] = technologies
         item['workplace'] = workplace
         item['url'] = url
 

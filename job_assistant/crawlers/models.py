@@ -11,6 +11,16 @@ class Category(models.Model):
         return self.name
 
 
+class Technology(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __repr__(self) -> str:
+        return self.name
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class SoftDeleteModel(models.Model):
     """Soft delete model which hides the objects instead of deleting them"""
 
@@ -36,5 +46,11 @@ class JobAd(SoftDeleteModel):
     date = models.DateField()
     company = models.CharField(max_length=100)
     categories = models.ManyToManyField(Category)
+    technologies = models.ManyToManyField(Technology)
     workplace = models.CharField(max_length=100) # TODO: Mby rework this to be Fk with separate model
-    url = models.URLField()
+    url = models.URLField() #Mby make this unique
+
+# class Search(models.Model):
+#     categories = models.CharField()
+#     techstack = models.CharField()
+#     workplace = models.CharField()

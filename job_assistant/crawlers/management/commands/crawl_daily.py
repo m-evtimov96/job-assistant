@@ -30,6 +30,8 @@ class Command(BaseCommand):
         cleaner = Cleaner(tags=[], attributes=[], protocols=[], strip=True, strip_comments=True)
         for result in results:
             categories = handle_categories(result)
+            technologies = handle_technologies(result)
+
             clean_body(result, cleaner)
 
             ad = JobAd.all_objects.filter(url=result["url"])
@@ -39,7 +41,9 @@ class Command(BaseCommand):
                 if ad.is_deleted:
                     ad.restore()
                 ad.categories.clear()
+                ad.technologies.clear()
             else:
                 ad = JobAd(**result)
                 ad.save()
             ad.categories.add(*categories)
+            ad.technologies.add(*technologies)

@@ -6,3 +6,4 @@ import scrapy
 class JobAdItem(DjangoItem):
    django_model = JobAd
    categories = scrapy.Field()
+   technologies = scrapy.Field()
