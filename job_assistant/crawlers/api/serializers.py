@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 
-from job_assistant.crawlers.models import JobAd, Category, Technology
+from job_assistant.crawlers.models import JobAd, Category, Technology, Workplace
 
 class JobAdSerializer(serializers.HyperlinkedModelSerializer):
     categories = serializers.SlugRelatedField(
@@ -11,6 +11,11 @@ class JobAdSerializer(serializers.HyperlinkedModelSerializer):
      )
     technologies = serializers.SlugRelatedField(
         many=True,
+        read_only=True,
+        slug_field="name"
+    )
+    workplace = serializers.SlugRelatedField(
+        many=False,
         read_only=True,
         slug_field="name"
     )
@@ -26,4 +31,9 @@ class CategorySerializer(serializers.HyperlinkedModelSerializer):
 class TechnologySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Technology
+        fields = ["id", "name"]
+
+class WorkplaceSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Workplace
         fields = ["id", "name"]
