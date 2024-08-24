@@ -65,4 +65,4 @@ class Search(models.Model):
     user = models.IntegerField()
     categories = models.CharField(blank=True, null=True)
     technologies = models.CharField(blank=True, null=True)
-    workplace = models.CharField(blank=True, null=True)
+    workplaces = models.CharField(blank=True, null=True)
