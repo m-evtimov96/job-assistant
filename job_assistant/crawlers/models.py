@@ -60,7 +60,9 @@ class JobAd(SoftDeleteModel):
     workplace = models.ForeignKey(Workplace, on_delete=models.DO_NOTHING)
     url = models.URLField() #Mby make this unique
 
-# class Search(models.Model):
-#     categories = models.CharField()
-#     techstack = models.CharField()
-#     workplace = models.CharField()
+
+class Search(models.Model):
+    user = models.IntegerField()
+    categories = models.CharField(blank=True, null=True)
+    techstack = models.CharField(blank=True, null=True)
+    workplace = models.CharField(blank=True, null=True)
