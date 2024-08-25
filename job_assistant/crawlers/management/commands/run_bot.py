@@ -64,10 +64,15 @@ class Command(BaseCommand):
                     [InlineKeyboardButton(f"{workplace['name']}{' ✅' if workplace['id'] in selected_workplaces else ''}", callback_data=f"workplace_{workplace['id']}")]
                     for workplace in workplaces
                 ]
+                keyboard.append([InlineKeyboardButton("All", callback_data='workplace_all')])
                 keyboard.append([InlineKeyboardButton("Save", callback_data='save_workplaces')])
                 reply_markup = InlineKeyboardMarkup(keyboard)
+
                 await query.message.reply_text('Select workplaces:', reply_markup=reply_markup)
                 context.user_data['edit_mode'] = 'workplaces'
+
+            elif query.data == 'workplace_all':
+                context.user_data['selected_workplaces'] = ""
 
         async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             edit_mode = context.user_data.get('edit_mode')
@@ -131,14 +136,16 @@ class Command(BaseCommand):
             await query.answer()
 
             if query.data.startswith('workplace_'):
-                workplace_id = int(query.data.split('_')[1])
-                selected_workplaces = context.user_data.get('selected_workplaces', [])
+                if query.data != "workplace_all":
+                    workplace_id = int(query.data.split('_')[1])
+                    selected_workplaces = context.user_data.get('selected_workplaces', [])
 
-                if workplace_id in selected_workplaces:
-                    selected_workplaces.remove(workplace_id)  # Deselect if already selected
+                    if workplace_id in selected_workplaces:
+                        selected_workplaces.remove(workplace_id)
+                    else:
+                        selected_workplaces.append(workplace_id)
                 else:
-                    selected_workplaces.append(workplace_id)  # Select if not selected
-
+                    selected_workplaces = []
                 context.user_data['selected_workplaces'] = selected_workplaces
                 
                 response = requests.get(DJANGO_API_GET_WORKPLACES_URL)
@@ -148,31 +155,37 @@ class Command(BaseCommand):
                     [InlineKeyboardButton(f"{workplace['name']}{' ✅' if workplace['id'] in selected_workplaces else ''}", callback_data=f"workplace_{workplace['id']}")]
                     for workplace in workplaces
                 ]
+                keyboard.append([InlineKeyboardButton(f"All{' ✅' if not selected_workplaces else ''}", callback_data='workplace_all')])
                 keyboard.append([InlineKeyboardButton("Save", callback_data='save_workplaces')])
                 reply_markup = InlineKeyboardMarkup(keyboard)
+                
                 await query.edit_message_reply_markup(reply_markup=reply_markup)
 
             elif query.data == 'save_workplaces':
-                selected_workplaces = context.user_data.get('selected_workplaces', [])
+                selected_workplaces = context.user_data.get('selected_workplaces', "")
+                if not selected_workplaces:
+                    selected_workplaces = ""
                 user_id = update.effective_user.id
 
-                if selected_workplaces:
-                    search = requests.get(DJANGO_API_SEARCH_URL+str(user_id)+"/")
+                if selected_workplaces is not None:
+                    search = requests.get(DJANGO_API_SEARCH_URL + str(user_id) + "/")
                     if search.status_code == 200:
                         data = {
                             "workplaces": f"{selected_workplaces}"
                         }
-                        requests.patch(DJANGO_API_SEARCH_URL+str(user_id)+"/", data=data)
+                        requests.patch(DJANGO_API_SEARCH_URL + str(user_id) + "/", data=data)
                     else:
                         data = {
                             "user": user_id,
                             "workplaces": f"{selected_workplaces}"
                         }
                         requests.post(DJANGO_API_SEARCH_URL, data=data)
-
-                    workplaces = requests.get(DJANGO_API_GET_WORKPLACES_URL).json()
-                    workplace_names = [workplace['name'] for workplace in workplaces if workplace['id'] in selected_workplaces]
-                    await query.message.reply_text(f"Search workplaces set to: {', '.join(workplace_names)}")
+                    if selected_workplaces:
+                        workplaces = requests.get(DJANGO_API_GET_WORKPLACES_URL).json()
+                        workplace_names = [workplace['name'] for workplace in workplaces if workplace['id'] in selected_workplaces]
+                        await query.message.reply_text(f"Search workplaces set to: {', '.join(workplace_names)}")
+                    else:
+                        await query.message.reply_text("Search workplaces reset to all.")
                 else:
                     await query.message.reply_text("No workplaces selected.")
                 await search_command(update.callback_query, context)
