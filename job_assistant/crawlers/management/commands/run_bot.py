@@ -19,6 +19,7 @@ class Command(BaseCommand):
         DJANGO_API_GET_CATEGORIES_URL = "http://127.0.0.1:8000/categories/"
         DJANGO_API_GET_TECHNOLOGIES_URL = "http://127.0.0.1:8000/technologies/"
         DJANGO_API_GET_WORKPLACES_URL = "http://127.0.0.1:8000/workplaces/"
+        DJANGO_API_SEARCH_URL = "http://127.0.0.1:8000/searches/"
         DJANGO_API_EDIT_CATEGORIES_URL = ""
         DJANGO_API_EDIT_TECHNOLOGIES_URL = ""
         DJANGO_API_EDIT_WORKPLACES_URL = ""
@@ -35,13 +36,15 @@ class Command(BaseCommand):
                 [InlineKeyboardButton("Edit workplaces", callback_data='edit_workplaces')]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text('Please choose which part of your search to edit.', reply_markup=reply_markup)
+
+            if update.message:  # Direct message case
+                await update.message.reply_text('Please choose which part of your search to edit.', reply_markup=reply_markup)
+            elif update.callback_query:  # Callback query case
+                await update.callback_query.message.reply_text('Please choose which part of your search to edit.', reply_markup=reply_markup)
 
         async def handle_search_options(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             query = update.callback_query
             await query.answer()
-            
-            logging.info(f"Button clicked: {query.data}")
 
             if query.data == 'edit_categories':
                 await query.message.reply_text("Provide categories separated by whitespaces:\nFor example: DevOps Frontend QA Python")
@@ -55,10 +58,8 @@ class Command(BaseCommand):
                 response = requests.get(DJANGO_API_GET_WORKPLACES_URL)
                 workplaces = response.json()
 
-                # Initialize selected workplaces in user_data if not already done
                 selected_workplaces = context.user_data.get('selected_workplaces', [])
 
-                # Create buttons with selection highlights
                 keyboard = [
                     [InlineKeyboardButton(f"{workplace['name']}{' ✅' if workplace['id'] in selected_workplaces else ''}", callback_data=f"workplace_{workplace['id']}")]
                     for workplace in workplaces
@@ -70,6 +71,7 @@ class Command(BaseCommand):
 
         async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             edit_mode = context.user_data.get('edit_mode')
+            user_id = update.effective_user.id
 
             if edit_mode == 'categories':
                 keywords = update.message.text
@@ -79,12 +81,22 @@ class Command(BaseCommand):
                 if categories:
                     category_names = [category['name'] for category in categories]
                     category_ids = [category['id'] for category in categories]
-                    # TODO: Edit categories in search obj
-                    # requests.post(DJANGO_API_EDIT_CATEGORIES_URL, json={'categories': category_ids})
-                    
+                    search = requests.get(DJANGO_API_SEARCH_URL+str(user_id)+"/")
+                    if search.status_code == 200:
+                        data = {
+                            "categories": f"{category_ids}"
+                        }
+                        requests.patch(DJANGO_API_SEARCH_URL+str(user_id)+"/", data=data)
+                    else:
+                        data = {
+                            "user": user_id,
+                            "categories": f"{category_ids}"
+                        }
+                        requests.post(DJANGO_API_SEARCH_URL, data=data)
+
                     await update.message.reply_text(f"Search categories set to: {', '.join(category_names)}")
                 else:
-                    await update.message.reply_text("No categories found.")
+                    await update.message.reply_text("No categories found. Please try again.")
                 await search_command(update, context)
 
             elif edit_mode == 'technologies':
@@ -95,34 +107,28 @@ class Command(BaseCommand):
                 if technologies:
                     technology_names = [tech['name'] for tech in technologies]
                     technology_ids = [tech['id'] for tech in technologies]
-                    # TODO: Edit technologies in search obj
-                    # requests.post(DJANGO_API_EDIT_TECHNOLOGIES_URL, json={'technologies': technology_ids})
-                
-                    await update.message.reply_text(f"Technologies found: {', '.join(technology_names)}")
-                else:
-                    await update.message.reply_text("No technologies found.")
-                await search_command(update, context)
+                    search = requests.get(DJANGO_API_SEARCH_URL+str(user_id)+"/")
+                    if search.status_code == 200:
+                        data = {
+                            "technologies": f"{technology_ids}"
+                        }
+                        requests.patch(DJANGO_API_SEARCH_URL+str(user_id)+"/", data=data)
+                    else:
+                        data = {
+                            "user": user_id,
+                            "categories": f"{technology_ids}"
+                        }
+                        requests.post(DJANGO_API_SEARCH_URL, data=data)
 
-        async def save_workplaces(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-            selected_workplaces = context.user_data.get('selected_workplaces', [])
-            if selected_workplaces:
-                response = requests.get(DJANGO_API_GET_WORKPLACES_URL)
-                workplaces = response.json()
-                workplace_names = [workplace['name'] for workplace in workplaces if workplace['id'] in selected_workplaces]
-                # Send the selected workplaces to the API
-                # requests.post(DJANGO_API_EDIT_WORKPLACES_URL, json={'workplaces': selected_workplaces})
                 
-                await update.callback_query.message.reply_text(f"You chose workplaces: {', '.join(workplace_names)}")
-            else:
-                await update.callback_query.message.reply_text("No workplaces selected.")
-            # TODO: Fix this redirect to search command menu
-            await search_command(update.callback_query.message, context)
+                    await update.message.reply_text(f"Search technologies set to: {', '.join(technology_names)}")
+                else:
+                    await update.message.reply_text("No technologies found. Please try again.")
+                await search_command(update, context)
 
         async def workplace_selection_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             query = update.callback_query
             await query.answer()
-
-            logging.info(f"Callback data in workplace_selection_handler: {query.data}")
 
             if query.data.startswith('workplace_'):
                 workplace_id = int(query.data.split('_')[1])
@@ -147,7 +153,29 @@ class Command(BaseCommand):
                 await query.edit_message_reply_markup(reply_markup=reply_markup)
 
             elif query.data == 'save_workplaces':
-                await save_workplaces(update, context)
+                selected_workplaces = context.user_data.get('selected_workplaces', [])
+                user_id = update.effective_user.id
+
+                if selected_workplaces:
+                    search = requests.get(DJANGO_API_SEARCH_URL+str(user_id)+"/")
+                    if search.status_code == 200:
+                        data = {
+                            "workplaces": f"{selected_workplaces}"
+                        }
+                        requests.patch(DJANGO_API_SEARCH_URL+str(user_id)+"/", data=data)
+                    else:
+                        data = {
+                            "user": user_id,
+                            "workplaces": f"{selected_workplaces}"
+                        }
+                        requests.post(DJANGO_API_SEARCH_URL, data=data)
+
+                    workplaces = requests.get(DJANGO_API_GET_WORKPLACES_URL).json()
+                    workplace_names = [workplace['name'] for workplace in workplaces if workplace['id'] in selected_workplaces]
+                    await query.message.reply_text(f"Search workplaces set to: {', '.join(workplace_names)}")
+                else:
+                    await query.message.reply_text("No workplaces selected.")
+                await search_command(update.callback_query, context)
 
         application = ApplicationBuilder().token(BOT_TOKEN).build()
 
