@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 import logging
 import requests
+import json
+from telegram.constants import ParseMode
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters, ApplicationBuilder, ContextTypes
 from job_assistant.settings import BOT_TOKEN
@@ -31,6 +33,7 @@ class Command(BaseCommand):
 
         async def search_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             keyboard = [
+                [InlineKeyboardButton("View current search parameters", callback_data='view_search_parameters')],
                 [InlineKeyboardButton("Edit categories", callback_data='edit_categories')],
                 [InlineKeyboardButton("Edit technologies", callback_data='edit_technologies')],
                 [InlineKeyboardButton("Edit workplaces", callback_data='edit_workplaces')]
@@ -38,15 +41,39 @@ class Command(BaseCommand):
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if update.message:  # Direct message case
-                await update.message.reply_text('Please choose which part of your search to edit.', reply_markup=reply_markup)
+                await update.message.reply_text('Choose what to do with your personal search.', reply_markup=reply_markup)
             elif update.callback_query:  # Callback query case
-                await update.callback_query.message.reply_text('Please choose which part of your search to edit.', reply_markup=reply_markup)
+                await update.callback_query.message.reply_text('Choose what to do with your personal search.', reply_markup=reply_markup)
 
         async def handle_search_options(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             query = update.callback_query
             await query.answer()
 
-            if query.data == 'edit_categories':
+            if query.data == 'view_search_parameters':
+                user_id = update.effective_user.id
+                response = requests.get(DJANGO_API_SEARCH_URL + str(user_id) + "/")
+                if response.status_code == 200:
+                    search_data = response.json()
+
+                    categories = json.loads(search_data.get('categories', '[]') or '[]')
+                    technologies = json.loads(search_data.get('technologies', '[]') or '[]')
+                    workplaces = json.loads(search_data.get('workplaces', '[]') or '[]')
+
+                    category_names = ", ".join([requests.get(DJANGO_API_GET_CATEGORIES_URL + f"{category_id}/").json()['name'] for category_id in categories])
+                    technology_names = ", ".join([requests.get(DJANGO_API_GET_TECHNOLOGIES_URL + f"{tech_id}/").json()['name'] for tech_id in technologies])
+                    workplace_names = ", ".join([requests.get(DJANGO_API_GET_WORKPLACES_URL + f"{workplace_id}/").json()['name'] for workplace_id in workplaces])
+
+                    search_params_message = (
+                            f"Current Search Parameters\n"
+                            f"<b>Categories:</b> {category_names or 'None selected'}\n"
+                            f"<b>Technologies:</b> {technology_names or 'None selected'}\n"
+                            f"<b>Workplaces:</b> {workplace_names or 'None selected'}\n"
+                        )
+                    await query.message.reply_text(search_params_message, parse_mode=ParseMode.HTML)
+                else:
+                    await query.message.reply_text("No search configured yet. Please edit the search options first.")
+            
+            elif query.data == 'edit_categories':
                 await query.message.reply_text("Provide categories separated by whitespaces:\nFor example: DevOps Frontend QA Python")
                 context.user_data['edit_mode'] = 'categories'
 
@@ -67,12 +94,8 @@ class Command(BaseCommand):
                 keyboard.append([InlineKeyboardButton("All", callback_data='workplace_all')])
                 keyboard.append([InlineKeyboardButton("Save", callback_data='save_workplaces')])
                 reply_markup = InlineKeyboardMarkup(keyboard)
-
                 await query.message.reply_text('Select workplaces:', reply_markup=reply_markup)
                 context.user_data['edit_mode'] = 'workplaces'
-
-            elif query.data == 'workplace_all':
-                context.user_data['selected_workplaces'] = ""
 
         async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             edit_mode = context.user_data.get('edit_mode')
@@ -195,7 +218,7 @@ class Command(BaseCommand):
         # Register handlers
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("search", search_command))
-        application.add_handler(CallbackQueryHandler(handle_search_options, pattern='^(edit_categories|edit_technologies|edit_workplaces)$'))
+        application.add_handler(CallbackQueryHandler(handle_search_options, pattern='^(view_search_parameters|edit_categories|edit_technologies|edit_workplaces)$'))
         application.add_handler(CallbackQueryHandler(workplace_selection_handler, pattern='^(workplace_.*|save_workplaces)$'))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
