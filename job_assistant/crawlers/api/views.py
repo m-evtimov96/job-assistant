@@ -40,3 +40,4 @@ class WorkplaceViewSet(ReadOnlyModelViewSet):
 class SearchViewSet(ModelViewSet):
     queryset = Search.objects.all()
     serializer_class = SearchSerializer
+    lookup_field = "user"
