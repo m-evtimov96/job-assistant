@@ -12,6 +12,9 @@ class Command(BaseCommand):
     help = "Run the telegram bot."
 
     def handle(self, *args, **options):
+        # TODO: Develop the /jobs menu with search options (last 5, quick_search etc.)
+        # TODO: Add /profile command for adding profile infor for the user (about, education, past work...)
+        # TODO: Add option for generating CV's for a job ad using the profile data and ChatGPT
 
         logging.basicConfig(
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -22,9 +25,6 @@ class Command(BaseCommand):
         DJANGO_API_GET_TECHNOLOGIES_URL = "http://127.0.0.1:8000/technologies/"
         DJANGO_API_GET_WORKPLACES_URL = "http://127.0.0.1:8000/workplaces/"
         DJANGO_API_SEARCH_URL = "http://127.0.0.1:8000/searches/"
-        DJANGO_API_EDIT_CATEGORIES_URL = ""
-        DJANGO_API_EDIT_TECHNOLOGIES_URL = ""
-        DJANGO_API_EDIT_WORKPLACES_URL = ""
 
         # Command handlers
 
