@@ -58,7 +58,7 @@ class JobAd(SoftDeleteModel):
     categories = models.ManyToManyField(Category)
     technologies = models.ManyToManyField(Technology)
     workplace = models.ForeignKey(Workplace, on_delete=models.DO_NOTHING)
-    url = models.URLField() #Mby make this unique
+    url = models.URLField(unique=True)
 
 
 class Search(models.Model):
