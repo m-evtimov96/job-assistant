@@ -21,7 +21,7 @@ class JobAdSerializer(serializers.HyperlinkedModelSerializer):
     )
     class Meta:
         model = JobAd
-        fields = ["url", "title", "body", "date", "company", "workplace", "categories", "technologies"]
+        fields = ["url", "title", "date", "company", "workplace", "categories", "technologies"]
 
 class CategorySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:

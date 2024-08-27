@@ -1,7 +1,7 @@
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from job_assistant.crawlers.api.serializers import JobAdSerializer, CategorySerializer, TechnologySerializer, WorkplaceSerializer, SearchSerializer
-from job_assistant.crawlers.api.filters import MultiKeywordNameSearchFilter
+from job_assistant.crawlers.api.filters import JobAdFilterSet, MultiKeywordNameSearchFilter
 from job_assistant.crawlers.models import JobAd, Category, Technology, Workplace, Search
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -10,9 +10,8 @@ class JobAdViewSet(ReadOnlyModelViewSet):
     queryset = JobAd.objects.all()
     serializer_class = JobAdSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    # TODO: Make the filter fields shorter in the url https://stackoverflow.com/questions/57846913/django-rest-framework-filtering-using-or-on-multiple-values-from-one-url-para
-    filterset_fields = ["workplace", "categories", "technologies"]
-    # search_fields = ["categories"]
+    filterset_class = JobAdFilterSet
+    search_fields = ["title"] #This searches with AND, maybe change to OR ? and maybe add body field ?
     ordering = ["-date"]
 
 

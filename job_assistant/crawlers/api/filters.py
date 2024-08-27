@@ -1,5 +1,7 @@
 from django.db.models import Q
 from rest_framework.filters import BaseFilterBackend
+import django_filters
+from job_assistant.crawlers.models import JobAd
 
 class MultiKeywordNameSearchFilter(BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
@@ -12,3 +14,14 @@ class MultiKeywordNameSearchFilter(BaseFilterBackend):
             query |= Q(name__icontains=term)
         
         return queryset.filter(query)
+    
+
+
+class JobAdFilterSet(django_filters.FilterSet):
+    workplace = django_filters.BaseInFilter(field_name='workplace', lookup_expr='in')
+    categories = django_filters.BaseInFilter(field_name='categories', lookup_expr='in')
+    technologies = django_filters.BaseInFilter(field_name='technologies', lookup_expr='in')
+
+    class Meta:
+        model = JobAd
+        fields = ['workplace', 'categories', 'technologies']
