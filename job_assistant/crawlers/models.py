@@ -70,8 +70,8 @@ class Search(models.Model):
 
 class Profile(models.Model):
     user = models.BigIntegerField()
-    bio = models.CharField(blank=True, null=True)
-    education = models.CharField(blank=True, null=True)
-    work_experience = models.CharField(blank=True, null=True)
-    skills = models.CharField(blank=True, null=True)
-    other = models.CharField(blank=True, null=True)
+    bio = models.TextField(blank=True, null=True, max_length=1000)
+    education = models.TextField(blank=True, null=True, max_length=1000)
+    work_experience = models.TextField(blank=True, null=True, max_length=4000)
+    skills = models.TextField(blank=True, null=True, max_length=2000)
+    other = models.TextField(blank=True, null=True, max_length=4000)
