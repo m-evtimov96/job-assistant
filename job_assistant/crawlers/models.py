@@ -66,3 +66,12 @@ class Search(models.Model):
     categories = models.CharField(blank=True, null=True)
     technologies = models.CharField(blank=True, null=True)
     workplaces = models.CharField(blank=True, null=True)
+
+
+class Profile(models.Model):
+    user = models.BigIntegerField()
+    bio = models.CharField(blank=True, null=True)
+    education = models.CharField(blank=True, null=True)
+    work_experience = models.CharField(blank=True, null=True)
+    skills = models.CharField(blank=True, null=True)
+    other = models.CharField(blank=True, null=True)
