@@ -75,3 +75,8 @@ class Profile(models.Model):
     work_experience = models.TextField(blank=True, null=True, max_length=4000)
     skills = models.TextField(blank=True, null=True, max_length=2000)
     other = models.TextField(blank=True, null=True, max_length=4000)
+
+
+class Favourite(models.Model):
+    user = models.BigIntegerField()
+    job_ad = models.ForeignKey(JobAd, on_delete=models.DO_NOTHING)

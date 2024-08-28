@@ -1,8 +1,8 @@
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
-from job_assistant.crawlers.api.serializers import JobAdSerializer, CategorySerializer, ProfileSerializer, TechnologySerializer, WorkplaceSerializer, SearchSerializer
+from job_assistant.crawlers.api.serializers import FavouriteSerializer, JobAdSerializer, CategorySerializer, ProfileSerializer, TechnologySerializer, WorkplaceSerializer, SearchSerializer
 from job_assistant.crawlers.api.filters import JobAdFilterSet, MultiKeywordNameSearchFilter
-from job_assistant.crawlers.models import JobAd, Category, Profile, Technology, Workplace, Search
+from job_assistant.crawlers.models import Favourite, JobAd, Category, Profile, Technology, Workplace, Search
 from django_filters.rest_framework import DjangoFilterBackend
 
 
@@ -45,4 +45,10 @@ class SearchViewSet(ModelViewSet):
 class ProfileViewSet(ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
+    lookup_field = "user"
+
+
+class FavouriteViewSet(ModelViewSet):
+    queryset = Favourite.objects.all()
+    serializer_class = FavouriteSerializer
     lookup_field = "user"

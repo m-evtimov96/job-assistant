@@ -3,7 +3,7 @@ from django.urls import path, include
 
 from rest_framework import routers
 
-from job_assistant.crawlers.api.views import JobAdViewSet,CategoryViewSet, ProfileViewSet, TechnologyViewSet, WorkplaceViewSet, SearchViewSet
+from job_assistant.crawlers.api.views import JobAdViewSet,CategoryViewSet, ProfileViewSet, TechnologyViewSet, WorkplaceViewSet, SearchViewSet, FavouriteViewSet
 
 router = routers.DefaultRouter()
 router.register(r"job-ads", JobAdViewSet)
@@ -12,6 +12,7 @@ router.register(r"technologies", TechnologyViewSet)
 router.register(r"workplaces", WorkplaceViewSet)
 router.register(r"searches", SearchViewSet)
 router.register(r"profiles", ProfileViewSet)
+router.register(r"favourites", FavouriteViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

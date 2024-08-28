@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 
-from job_assistant.crawlers.models import JobAd, Category, Profile, Technology, Workplace, Search
+from job_assistant.crawlers.models import Favourite, JobAd, Category, Profile, Technology, Workplace, Search
 
 class JobAdSerializer(serializers.HyperlinkedModelSerializer):
     categories = serializers.SlugRelatedField(
@@ -21,7 +21,7 @@ class JobAdSerializer(serializers.HyperlinkedModelSerializer):
     )
     class Meta:
         model = JobAd
-        fields = ["url", "title", "date", "company", "workplace", "categories", "technologies"]
+        fields = ["id", "url", "title", "date", "company", "workplace", "categories", "technologies"]
 
 class CategorySerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -47,3 +47,8 @@ class ProfileSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Profile
         fields = ["user", "bio", "education", "work_experience", "skills", "other"]
+
+class FavouriteSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Favourite
+        fields = ["user", "job_ad"]
