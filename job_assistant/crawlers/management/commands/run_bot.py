@@ -40,9 +40,16 @@ class Command(BaseCommand):
             elif 'profile_mode' in context.user_data:
                 await profile_message_handler(update, context)
 
+
+        # Help functions
+        ################
         def clear_user_data(data):
             data.pop("job_search_mode", None)
             data.pop("edit_mode", None)
+
+        def shorten_profile_data(data):
+            data = (data[:500] + '...') if len(data) > 500 else data
+            return data
 
 
         # Search handlers
@@ -346,6 +353,14 @@ class Command(BaseCommand):
 
         # Profile handlers
         ##################
+        MAX_LENGTHS = {
+            'bio': 1000,
+            'education': 1000,
+            'work_experience': 3900,
+            'skills': 2000,
+            'other': 4000
+        }
+
         async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             keyboard = [
                 [InlineKeyboardButton("View Profile", callback_data='view_profile')],
@@ -370,12 +385,11 @@ class Command(BaseCommand):
                 response = requests.get(DJANGO_API_PROFILE_URL + str(user_id) + "/")
                 if response.status_code == 200:
                     profile_data = response.json()
-
-                    bio = profile_data.get('bio')
-                    education = profile_data.get('education')
-                    work_experience = profile_data.get('work_experience')
-                    skills = profile_data.get('skills')
-                    other = profile_data.get('other')
+                    bio = shorten_profile_data(profile_data.get('bio') or 'No information')
+                    education = shorten_profile_data(profile_data.get('education') or 'No information')
+                    work_experience = shorten_profile_data(profile_data.get('work_experience') or 'No information')
+                    skills = shorten_profile_data(profile_data.get('skills') or 'No information')
+                    other = shorten_profile_data(profile_data.get('other') or 'No information')
 
                     profile_message = (
                         f"<b>Profile Information</b>\n"
@@ -393,7 +407,7 @@ class Command(BaseCommand):
                 split_place = query.data.count("_")+1
                 mode = query.data.split('_')[1:split_place]
                 mode = "_".join(mode)
-                await query.message.reply_text(f"Please provide information for {mode.replace('_', ' ')} section.")
+                await query.message.reply_text(f"Please provide information for {mode.replace('_', ' ')} section. (max chars - {MAX_LENGTHS.get(mode, 3900)})")
                 clear_user_data(context.user_data)
                 context.user_data['profile_mode'] = mode
 
@@ -401,10 +415,14 @@ class Command(BaseCommand):
             profile_mode = context.user_data.get('profile_mode')
             user_id = update.effective_user.id
 
-            data = {
-                profile_mode: update.message.text
-            }
             
+            user_input = update.message.text
+            max_length = MAX_LENGTHS.get(profile_mode, 3900)
+            truncated_input = user_input[:max_length]
+            data = {
+                profile_mode: truncated_input
+            }
+
             response = requests.get(DJANGO_API_PROFILE_URL + str(user_id) + "/")
             if response.status_code == 200:
                 requests.patch(DJANGO_API_PROFILE_URL + str(user_id) + "/", data=data)
@@ -412,13 +430,16 @@ class Command(BaseCommand):
                 data["user"] = user_id
                 requests.post(DJANGO_API_PROFILE_URL, data=data)
 
-            await update.message.reply_text(f"Your {profile_mode.replace('_', ' ')} information has been updated.")
+            if len(user_input) > max_length:
+                await update.message.reply_text(f"Your {profile_mode.replace('_', ' ')} information was too long and has been truncated to {max_length} characters.")
+            else:
+                await update.message.reply_text(f"Your {profile_mode.replace('_', ' ')} information has been updated.")
+
             await profile_command(update, context)
 
 
         # Application setup and start
         #############################
-
         application = ApplicationBuilder().token(BOT_TOKEN).build()
 
         start_handler = CommandHandler("start", start)
