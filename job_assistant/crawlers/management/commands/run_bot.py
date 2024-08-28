@@ -229,15 +229,15 @@ class Command(BaseCommand):
         ###############
         async def jobs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             keyboard = [
-                [InlineKeyboardButton("Newest job ads", callback_data='last_n_job_ads')],
+                [InlineKeyboardButton("Latest job ads", callback_data='last_n_job_ads')],
                 [InlineKeyboardButton("Quick search", callback_data='quick_search')]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             if update.message:
-                await update.message.reply_text("Please choose an option to search for job ads.\nThe 'newest job ads' function uses your predefined search, while the 'quick search' does a full text search in the title and body of the ads with provided keywords.", reply_markup=reply_markup)
+                await update.message.reply_text("Please choose an option to search for job ads.\nThe 'latest job ads' function uses your predefined search, while the 'quick search' does a full text search in the title and body of the ads with provided keywords.", reply_markup=reply_markup)
             elif update.callback_query:
-                await update.callback_query.message.reply_text("Please choose an option to search for job ads.\nThe 'newest job ads' function uses your predefined search, while the 'quick search' does a full text search in the title and body of the ads with provided keywords.", reply_markup=reply_markup)
+                await update.callback_query.message.reply_text("Please choose an option to search for job ads.\nThe 'latest job ads' function uses your predefined search, while the 'quick search' does a full text search in the title and body of the ads with provided keywords.", reply_markup=reply_markup)
 
         async def handle_jobs_options(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             query = update.callback_query
@@ -246,7 +246,7 @@ class Command(BaseCommand):
             if query.data == 'last_n_job_ads':
                 response = requests.get(DJANGO_API_SEARCH_URL + str(update.effective_user.id) + "/")
                 if response.status_code == 404:
-                    await query.message.reply_text("No search configurjob_message_handleration found. Please set up your search parameters first.")
+                    await query.message.reply_text("No search configuration found. Please set up your search parameters first.")
                     return
                 await query.message.reply_text("How many job ads tied to your personal search would you like to see? (1-20)")
                 context.user_data['job_search_mode'] = 'last_n_job_ads'
