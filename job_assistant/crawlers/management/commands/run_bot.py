@@ -12,8 +12,8 @@ class Command(BaseCommand):
     help = "Run the telegram bot."
 
     def handle(self, *args, **options):
-        # TODO: Add /profile command for adding profile infor for the user (about, education, past work...)
-        # TODO: Add option for generating CV's for a job ad using the profile data and ChatGPT
+        # TODO: Add option for generating CV's for a job ad using the profile data and ChatGPT - button in add repr
+        # TODO: Add option for adding job ad to favourites - button in add repr
 
         logging.basicConfig(
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -25,17 +25,24 @@ class Command(BaseCommand):
         DJANGO_API_GET_WORKPLACES_URL = "http://127.0.0.1:8000/workplaces/"
         DJANGO_API_SEARCH_URL = "http://127.0.0.1:8000/searches/"
         DJANGO_API_GET_JOB_ADS_URL = "http://127.0.0.1:8000/job-ads/"
+        DJANGO_API_PROFILE_URL = "http://127.0.0.1:8000/profiles/"
 
         # Base handlers
         ###############
         async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-            await update.message.reply_text("Welcome! Please use /search or /jobs to continue.")
+            await update.message.reply_text("Welcome! Please use /search, /jobs or /profile to continue.")
 
         async def unified_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if 'job_search_mode' in context.user_data:
                 await job_message_handler(update, context)
             elif 'edit_mode' in context.user_data:
                 await search_message_handler(update, context)
+            elif 'profile_mode' in context.user_data:
+                await profile_message_handler(update, context)
+
+        def clear_user_data(data):
+            data.pop("job_search_mode", None)
+            data.pop("edit_mode", None)
 
 
         # Search handlers
@@ -84,12 +91,12 @@ class Command(BaseCommand):
             
             elif query.data == 'edit_categories':
                 await query.message.reply_text("Provide categories separated by whitespaces:\nFor example: DevOps Frontend QA Python")
-                context.user_data.pop("job_search_mode", None)
+                clear_user_data(context.user_data)
                 context.user_data['edit_mode'] = 'categories'
 
             elif query.data == 'edit_technologies':
                 await query.message.reply_text("Provide technologies separated by whitespaces:\nFor example: Django ElasticSearch Redis Jira")
-                context.user_data.pop("job_search_mode", None)
+                clear_user_data(context.user_data)
                 context.user_data['edit_mode'] = 'technologies'
 
             elif query.data == 'edit_workplaces':
@@ -252,7 +259,7 @@ class Command(BaseCommand):
                 context.user_data['job_search_mode'] = 'last_n_job_ads'
             
             elif query.data == 'quick_search':
-                await query.message.reply_text("Please provide one or multiple search keywords for the full text seach.\nFor example:Python AI")
+                await query.message.reply_text("Please provide one or multiple search keywords for the full text seach.\nFor example: Python AI")
                 context.user_data['job_search_mode'] = 'quick_search'
 
         async def job_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -337,6 +344,78 @@ class Command(BaseCommand):
                 await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
 
 
+        # Profile handlers
+        ##################
+        async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+            keyboard = [
+                [InlineKeyboardButton("View Profile", callback_data='view_profile')],
+                [InlineKeyboardButton("Edit Bio", callback_data='edit_bio')],
+                [InlineKeyboardButton("Edit Education", callback_data='edit_education')],
+                [InlineKeyboardButton("Edit Work Experience", callback_data='edit_work_experience')],
+                [InlineKeyboardButton("Edit Skills", callback_data='edit_skills')],
+                [InlineKeyboardButton("Edit Other", callback_data='edit_other')],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            if update.message:
+                await update.message.reply_text('Choose what to do with your profile information.', reply_markup=reply_markup)
+            elif update.callback_query:
+                await update.callback_query.message.reply_text('Choose what to do with your profile information.', reply_markup=reply_markup)
+
+        async def handle_profile_options(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+            query = update.callback_query
+            await query.answer()
+
+            if query.data == 'view_profile':
+                user_id = update.effective_user.id
+                response = requests.get(DJANGO_API_PROFILE_URL + str(user_id) + "/")
+                if response.status_code == 200:
+                    profile_data = response.json()
+
+                    bio = profile_data.get('bio')
+                    education = profile_data.get('education')
+                    work_experience = profile_data.get('work_experience')
+                    skills = profile_data.get('skills')
+                    other = profile_data.get('other')
+
+                    profile_message = (
+                        f"<b>Profile Information</b>\n"
+                        f"<b>Bio:</b> {bio}\n"
+                        f"<b>Education:</b> {education}\n"
+                        f"<b>Work Experience:</b> {work_experience}\n"
+                        f"<b>Skills:</b> {skills}\n"
+                        f"<b>Other:</b> {other}\n"
+                    )
+                    await query.message.reply_text(profile_message, parse_mode=ParseMode.HTML)
+                else:
+                    await query.message.reply_text("No profile found. Please add your profile information first.")
+            
+            else:
+                split_place = query.data.count("_")+1
+                mode = query.data.split('_')[1:split_place]
+                mode = "_".join(mode)
+                await query.message.reply_text(f"Please provide information for {mode.replace('_', ' ')} section.")
+                clear_user_data(context.user_data)
+                context.user_data['profile_mode'] = mode
+
+        async def profile_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+            profile_mode = context.user_data.get('profile_mode')
+            user_id = update.effective_user.id
+
+            data = {
+                profile_mode: update.message.text
+            }
+            
+            response = requests.get(DJANGO_API_PROFILE_URL + str(user_id) + "/")
+            if response.status_code == 200:
+                requests.patch(DJANGO_API_PROFILE_URL + str(user_id) + "/", data=data)
+            else:
+                data["user"] = user_id
+                requests.post(DJANGO_API_PROFILE_URL, data=data)
+
+            await update.message.reply_text(f"Your {profile_mode.replace('_', ' ')} information has been updated.")
+            await profile_command(update, context)
+
+
         # Application setup and start
         #############################
 
@@ -344,7 +423,6 @@ class Command(BaseCommand):
 
         start_handler = CommandHandler("start", start)
         base_message_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, unified_message_handler)
-
         base_handlers = [
             start_handler,
             base_message_handler,
@@ -353,7 +431,6 @@ class Command(BaseCommand):
         search_menu_handler = CommandHandler("search", search_command)
         search_options_handler = CallbackQueryHandler(handle_search_options, pattern='^(view_search_parameters|edit_categories|edit_technologies|edit_workplaces)$')
         search_workplace_handler = CallbackQueryHandler(workplace_selection_handler, pattern='^(workplace_.*|save_workplaces)$')
-
         search_handlers = [
             search_menu_handler,
             search_options_handler,
@@ -362,13 +439,20 @@ class Command(BaseCommand):
 
         jobs_menu_handler = CommandHandler("jobs", jobs_command)
         jobs_search_options_handler = CallbackQueryHandler(handle_jobs_options, pattern='^(last_n_job_ads|quick_search)$')
-
         jobs_handlers = [
             jobs_menu_handler,
             jobs_search_options_handler,
         ]
 
-        handlers = base_handlers + search_handlers + jobs_handlers
+
+        profile_menu_handler = CommandHandler("profile", profile_command)
+        profile_options_handler = CallbackQueryHandler(handle_profile_options, pattern='^(view_profile|edit_bio|edit_education|edit_work_experience|edit_skills|edit_other)$')
+        profile_handlers = [
+            profile_menu_handler,
+            profile_options_handler,
+        ]
+
+        handlers = base_handlers + search_handlers + jobs_handlers + profile_handlers
         application.add_handlers(handlers)
 
         application.run_polling()
