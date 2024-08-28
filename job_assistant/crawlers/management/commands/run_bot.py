@@ -26,6 +26,7 @@ class Command(BaseCommand):
         DJANGO_API_SEARCH_URL = "http://127.0.0.1:8000/searches/"
         DJANGO_API_GET_JOB_ADS_URL = "http://127.0.0.1:8000/job-ads/"
         DJANGO_API_PROFILE_URL = "http://127.0.0.1:8000/profiles/"
+        DJANGO_API_FAVOURITES_URL = "http://127.0.0.1:8000/favourites/"
 
         # Base handlers
         ###############
@@ -325,8 +326,8 @@ class Command(BaseCommand):
                 await update.message.reply_text("No job ads found. Try to modify your search criteria.")
                 return
 
-            messages = []
             for ad in job_ads:
+                job_id = ad.get("id")
                 title = ad.get("title", "N/A")
                 company = ad.get("company", "N/A")
                 workplace = ad.get("workplace", "N/A")
@@ -345,11 +346,32 @@ class Command(BaseCommand):
                     f"{url}"
                 )
                 
-                messages.append(message)
+                keyboard = [
+                    [InlineKeyboardButton("Add to Favourites", callback_data=f'add_favourite_{job_id}')],
+                    [InlineKeyboardButton("Generate CV", callback_data=f'generate_cv_{job_id}')],
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
 
-            for msg in messages:
-                await update.message.reply_text(msg, parse_mode=ParseMode.HTML)
+                await update.message.reply_text(message, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
 
+        async def handle_job_ad_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+            query = update.callback_query
+            await query.answer()
+            user_id = update.effective_user.id
+
+            if query.data.startswith('add_favourite_'):
+                job_id = query.data.split('add_favourite_')[1]
+
+                # Logic to add the job to the user's favourites
+                # add_to_favourites(user_id, job_id)
+                await query.message.reply_text(f"Job was added to your favourites!")
+
+            elif query.data.startswith('generate_cv_'):
+                job_id = query.data.split('generate_cv_')[1]
+
+                # Logic to generate a CV tailored to the job
+                # cv_link = generate_cv_for_job(user_id, job_id)
+                await query.message.reply_text(f"Your CV has been generated! You can download it here:")
 
         # Profile handlers
         ##################
@@ -460,9 +482,11 @@ class Command(BaseCommand):
 
         jobs_menu_handler = CommandHandler("jobs", jobs_command)
         jobs_search_options_handler = CallbackQueryHandler(handle_jobs_options, pattern='^(last_n_job_ads|quick_search)$')
+        jobs_buttons_handler = CallbackQueryHandler(handle_job_ad_buttons)
         jobs_handlers = [
             jobs_menu_handler,
             jobs_search_options_handler,
+            jobs_buttons_handler,
         ]
 
 
