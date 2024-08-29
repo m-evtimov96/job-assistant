@@ -360,11 +360,21 @@ class Command(BaseCommand):
             user_id = update.effective_user.id
 
             if query.data.startswith('add_favourite_'):
-                job_id = query.data.split('add_favourite_')[1]
+                job_id = int(query.data.split('add_favourite_')[1])
+                check_data = {"user": user_id, "job_ad": job_id}
 
-                # Logic to add the job to the user's favourites
-                # add_to_favourites(user_id, job_id)
-                await query.message.reply_text(f"Job was added to your favourites!")
+                check_response = requests.get(DJANGO_API_FAVOURITES_URL, params=check_data)
+                results = check_response.json()
+                if results["count"] == 0:
+                    add_data = {"user": user_id, "job_ad": job_id}
+                    add_response = requests.post(DJANGO_API_FAVOURITES_URL, json=add_data)
+
+                    if add_response.status_code == 201:
+                        await query.message.reply_text("The job ad was added to your favourites!")
+                    else:
+                        await query.message.reply_text("Failed to add the job ad to your favourites.")
+                else:
+                    await query.message.reply_text("This job ad is already in your favourites.")
 
             elif query.data.startswith('generate_cv_'):
                 job_id = query.data.split('generate_cv_')[1]

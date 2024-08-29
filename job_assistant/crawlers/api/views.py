@@ -51,4 +51,6 @@ class ProfileViewSet(ModelViewSet):
 class FavouriteViewSet(ModelViewSet):
     queryset = Favourite.objects.all()
     serializer_class = FavouriteSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['user', 'job_ad']    
     lookup_field = "user"
