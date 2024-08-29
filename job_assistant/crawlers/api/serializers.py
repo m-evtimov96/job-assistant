@@ -51,4 +51,4 @@ class ProfileSerializer(serializers.HyperlinkedModelSerializer):
 class FavouriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favourite
-        fields = ["user", "job_ad"]
+        fields = ["id", "user", "job_ad"]

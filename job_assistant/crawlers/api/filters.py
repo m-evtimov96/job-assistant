@@ -18,10 +18,11 @@ class MultiKeywordNameSearchFilter(BaseFilterBackend):
 
 
 class JobAdFilterSet(django_filters.FilterSet):
+    id = django_filters.BaseInFilter(field_name='id', lookup_expr='in')
     workplace = django_filters.BaseInFilter(field_name='workplace', lookup_expr='in')
     categories = django_filters.BaseInFilter(field_name='categories', lookup_expr='in')
     technologies = django_filters.BaseInFilter(field_name='technologies', lookup_expr='in')
 
     class Meta:
         model = JobAd
-        fields = ['workplace', 'categories', 'technologies']
+        fields = ['id', 'workplace', 'categories', 'technologies']

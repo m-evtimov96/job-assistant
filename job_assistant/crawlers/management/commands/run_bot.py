@@ -12,8 +12,8 @@ class Command(BaseCommand):
     help = "Run the telegram bot."
 
     def handle(self, *args, **options):
+        # TODO: Mby return to the /jobs list when receiving job ads and viewing/removing favourites
         # TODO: Add option for generating CV's for a job ad using the profile data and ChatGPT - button in add repr
-        # TODO: Add option for adding job ad to favourites - button in add repr
 
         logging.basicConfig(
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -245,14 +245,23 @@ class Command(BaseCommand):
         async def jobs_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             keyboard = [
                 [InlineKeyboardButton("Latest job ads", callback_data='last_n_job_ads')],
-                [InlineKeyboardButton("Quick search", callback_data='quick_search')]
+                [InlineKeyboardButton("Quick search", callback_data='quick_search')],
+                [InlineKeyboardButton("View Favourites", callback_data='view_favourites')]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             if update.message:
-                await update.message.reply_text("Please choose an option to search for job ads.\nThe 'latest job ads' function uses your predefined search, while the 'quick search' does a full text search in the title and body of the ads with provided keywords.", reply_markup=reply_markup)
+                await update.message.reply_text(
+                    "Please choose an option to search for job ads.\nThe 'latest job ads' function uses your predefined search, "
+                    "while the 'quick search' does a full text search in the title and body of the ads with provided keywords.",
+                    reply_markup=reply_markup
+                )
             elif update.callback_query:
-                await update.callback_query.message.reply_text("Please choose an option to search for job ads.\nThe 'latest job ads' function uses your predefined search, while the 'quick search' does a full text search in the title and body of the ads with provided keywords.", reply_markup=reply_markup)
+                await update.callback_query.message.reply_text(
+                    "Please choose an option to search for job ads.\nThe 'latest job ads' function uses your predefined search, "
+                    "while the 'quick search' does a full text search in the title and body of the ads with provided keywords.",
+                    reply_markup=reply_markup
+                )
 
         async def handle_jobs_options(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             query = update.callback_query
@@ -267,12 +276,28 @@ class Command(BaseCommand):
                 context.user_data['job_search_mode'] = 'last_n_job_ads'
             
             elif query.data == 'quick_search':
-                await query.message.reply_text("Please provide one or multiple search keywords for the full text seach.\nFor example: Python AI")
+                await query.message.reply_text("Please provide one or multiple search keywords for the full text search.\nFor example: Python AI")
                 context.user_data['job_search_mode'] = 'quick_search'
+
+            elif query.data == 'view_favourites':
+                user_id = update.effective_user.id
+                favourites_response = requests.get(DJANGO_API_FAVOURITES_URL, params={"user": user_id})
+                if favourites_response.status_code == 200:
+                    favourite_jobs = favourites_response.json().get('results', [])
+                    if favourite_jobs:
+                        job_ids = [job['job_ad'] for job in favourite_jobs]
+                        jobs_response = requests.get(DJANGO_API_GET_JOB_ADS_URL, params={"id": ','.join(map(str, job_ids))})
+                        job_ads = jobs_response.json().get("results", [])
+                        await display_job_ads(update, job_ads, favourite_mode=True)
+                    else:
+                        await query.message.reply_text("You have no favourite job ads.")
+                else:
+                    await query.message.reply_text("Failed to retrieve your favourite job ads.")
 
         async def job_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             user_id = update.effective_user.id
             job_search_mode = context.user_data.get('job_search_mode')
+            
             if job_search_mode == 'last_n_job_ads':
                 try:
                     limit = int(update.message.text)
@@ -320,11 +345,15 @@ class Command(BaseCommand):
                 except ValueError:
                     await update.message.reply_text("Please enter a valid number.")
 
-
-        async def display_job_ads(update: Update, job_ads: list) -> None:
+        async def display_job_ads(update: Update, job_ads: list, favourite_mode: bool = False) -> None:
             if not job_ads:
                 await update.message.reply_text("No job ads found. Try to modify your search criteria.")
                 return
+
+            if favourite_mode:
+                await update.callback_query.message.reply_text("Here are your favourite job ads:")
+            else:
+                await update.message.reply_text("Here are the job ads that match your search criteria:")
 
             for ad in job_ads:
                 job_id = ad.get("id")
@@ -346,13 +375,27 @@ class Command(BaseCommand):
                     f"{url}"
                 )
                 
+                check_data = {"user": update.effective_user.id, "job_ad": job_id}
+                check_response = requests.get(DJANGO_API_FAVOURITES_URL, params=check_data)
+                is_favourite = check_response.json().get("count", 0) > 0
+
+                if favourite_mode or is_favourite:
+                    button_text = "Remove from Favourites"
+                    callback_data = f'remove_favourite_{job_id}'
+                else:
+                    button_text = "Add to Favourites"
+                    callback_data = f'add_favourite_{job_id}'
+
                 keyboard = [
-                    [InlineKeyboardButton("Add to Favourites", callback_data=f'add_favourite_{job_id}')],
+                    [InlineKeyboardButton(button_text, callback_data=callback_data)],
                     [InlineKeyboardButton("Generate CV", callback_data=f'generate_cv_{job_id}')],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
 
-                await update.message.reply_text(message, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+                if update.message:
+                    await update.message.reply_text(message, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
+                elif update.callback_query:
+                    await update.callback_query.message.reply_text(message, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
 
         async def handle_job_ad_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             query = update.callback_query
@@ -363,9 +406,8 @@ class Command(BaseCommand):
                 job_id = int(query.data.split('add_favourite_')[1])
                 check_data = {"user": user_id, "job_ad": job_id}
 
-                check_response = requests.get(DJANGO_API_FAVOURITES_URL, params=check_data)
-                results = check_response.json()
-                if results["count"] == 0:
+                result = requests.get(DJANGO_API_FAVOURITES_URL, params=check_data).json()
+                if result["count"] == 0:
                     add_data = {"user": user_id, "job_ad": job_id}
                     add_response = requests.post(DJANGO_API_FAVOURITES_URL, json=add_data)
 
@@ -375,6 +417,23 @@ class Command(BaseCommand):
                         await query.message.reply_text("Failed to add the job ad to your favourites.")
                 else:
                     await query.message.reply_text("This job ad is already in your favourites.")
+
+            elif query.data.startswith('remove_favourite_'):
+                job_id = int(query.data.split('remove_favourite_')[1])
+
+                check_data = {"user": user_id, "job_ad": job_id}
+                result = requests.get(DJANGO_API_FAVOURITES_URL, params=check_data).json()
+
+                if result["count"] > 0:
+                    favourite_id = result['results'][0]['id']
+                    delete_response = requests.delete(f"{DJANGO_API_FAVOURITES_URL}{favourite_id}/")
+
+                    if delete_response.status_code == 204:
+                        await query.message.reply_text("The job ad was removed from your favourites.")
+                    else:
+                        await query.message.reply_text("Failed to remove the job ad from your favourites.")
+                else:
+                    await query.message.reply_text("This job ad is not in your favourites.")
 
             elif query.data.startswith('generate_cv_'):
                 job_id = query.data.split('generate_cv_')[1]
@@ -491,7 +550,7 @@ class Command(BaseCommand):
         ]
 
         jobs_menu_handler = CommandHandler("jobs", jobs_command)
-        jobs_search_options_handler = CallbackQueryHandler(handle_jobs_options, pattern='^(last_n_job_ads|quick_search)$')
+        jobs_search_options_handler = CallbackQueryHandler(handle_jobs_options, pattern='^(last_n_job_ads|quick_search|view_favourites)$')
         jobs_buttons_handler = CallbackQueryHandler(handle_job_ad_buttons)
         jobs_handlers = [
             jobs_menu_handler,
