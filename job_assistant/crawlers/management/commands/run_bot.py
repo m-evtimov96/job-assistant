@@ -374,12 +374,8 @@ class Command(BaseCommand):
                     f"Technologies: {technologies}\n"
                     f"{url}"
                 )
-                
-                check_data = {"user": update.effective_user.id, "job_ad": job_id}
-                check_response = requests.get(DJANGO_API_FAVOURITES_URL, params=check_data)
-                is_favourite = check_response.json().get("count", 0) > 0
 
-                if favourite_mode or is_favourite:
+                if favourite_mode:
                     button_text = "Remove from Favourites"
                     callback_data = f'remove_favourite_{job_id}'
                 else:
@@ -551,7 +547,7 @@ class Command(BaseCommand):
 
         jobs_menu_handler = CommandHandler("jobs", jobs_command)
         jobs_search_options_handler = CallbackQueryHandler(handle_jobs_options, pattern='^(last_n_job_ads|quick_search|view_favourites)$')
-        jobs_buttons_handler = CallbackQueryHandler(handle_job_ad_buttons)
+        jobs_buttons_handler = CallbackQueryHandler(handle_job_ad_buttons, pattern='^(add_favourite_|remove_favourite_|generate_cv_).*$')
         jobs_handlers = [
             jobs_menu_handler,
             jobs_search_options_handler,
