@@ -149,3 +149,4 @@ REST_FRAMEWORK = {
 # Telegram bot
 
 BOT_TOKEN = env("BOT_API_KEY")
+OPENAI_API_KEY = env("OPENAI_API_KEY")
