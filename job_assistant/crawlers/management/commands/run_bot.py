@@ -2,8 +2,10 @@ from django.core.management.base import BaseCommand
 import logging
 import requests
 import json
+from io import BytesIO
+import base64
 from telegram.constants import ParseMode
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, InputFile
 from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters, ApplicationBuilder, ContextTypes
 from job_assistant.settings import BOT_TOKEN
 
@@ -27,6 +29,7 @@ class Command(BaseCommand):
         DJANGO_API_GET_JOB_ADS_URL = "http://127.0.0.1:8000/job-ads/"
         DJANGO_API_PROFILE_URL = "http://127.0.0.1:8000/profiles/"
         DJANGO_API_FAVOURITES_URL = "http://127.0.0.1:8000/favourites/"
+        DJANGO_API_GENERATE_CV_URL = "http://127.0.0.1:8000/generate-cv/"
 
         # Base handlers
         ###############
@@ -434,9 +437,18 @@ class Command(BaseCommand):
             elif query.data.startswith('generate_cv_'):
                 job_id = query.data.split('generate_cv_')[1]
 
-                # Logic to generate a CV tailored to the job
-                # cv_link = generate_cv_for_job(user_id, job_id)
-                await query.message.reply_text(f"Your CV has been generated! You can download it here:")
+                await query.message.reply_text("Please wait, your personalized CV file is being generated...")
+
+                response = requests.post(DJANGO_API_GENERATE_CV_URL, data={'jobad_id': job_id, 'user_id': user_id})
+
+                if response.status_code == 200:
+                    response_json = response.json()
+                    job_title = response_json.get('job_title')
+                    pdf_bytes = base64.b64decode(response_json.get('pdf_content'))
+                    pdf_file = InputFile(BytesIO(pdf_bytes), filename=f'cv {job_title}.pdf')
+                    await query.message.reply_document(document=pdf_file)
+                else:
+                    await query.message.reply_text("There was an error generating your CV. Please try again later.")
 
         # Profile handlers
         ##################
