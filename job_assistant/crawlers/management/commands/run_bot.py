@@ -15,7 +15,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # TODO: Mby return to the /jobs list when receiving job ads and viewing/removing favourites
-        # TODO: Add option for generating CV's for a job ad using the profile data and ChatGPT - button in add repr
 
         logging.basicConfig(
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -34,7 +33,36 @@ class Command(BaseCommand):
         # Base handlers
         ###############
         async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-            await update.message.reply_text("Welcome! Please use /search, /jobs or /profile to continue.")
+            await update.message.reply_text("Welcome! Please use /search, /jobs or /profile to continue.\nUser /help to see all the available commands.")
+        
+        async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+            help_text = (
+                "<b>Welcome to the Job Assistant Bot!</b>\n\n"
+                "<b>/search</b> - Modify your search criteria that will be used in /jobs.\n"
+                "   • <b>view_search_parameters</b>: View your current search parameters.\n"
+                "   • <b>edit_categories</b>: Edit job categories.\n"
+                "   • <b>edit_technologies</b>: Edit technology preferences.\n"
+                "   • <b>edit_workplaces</b>: Edit preferred workplaces.\n\n"
+                
+                "<b>/jobs</b> - Get the latest job ads for your search, add or remove them from/to your favourites and generate a personalized CV.\n"
+                "   • <b>last_n_job_ads</b>: View the latest job ads according to your specified search parameters.\n"
+                "   • <b>quick_search</b>: Quickly search for jobs without the need of setting up a search first. Does a fulltext search in the tittle and description of the job ads.\n"
+                "   • <b>view_favourites</b>: View your favorite jobs.\n"
+                "   • <b>add_favourite</b>: Once displayed add a job to your favorites.\n"
+                "   • <b>remove_favourite</b>: When viewing your favourites remove a job from the list.\n"
+                "   • <b>generate_cv_</b>: Generate a CV tailored to a specific job using the information specified in your /profile.\n\n"
+                
+                "<b>/profile</b> - Manage your personal profile information used when building a custom CV.\n"
+                "   • <b>view_profile</b>: View your profile information.\n"
+                "   • <b>edit_bio</b>: Edit your bio.\n"
+                "   • <b>edit_education</b>: Edit your education details.\n"
+                "   • <b>edit_work_experience</b>: Edit your work experience.\n"
+                "   • <b>edit_skills</b>: Edit your skills.\n"
+                "   • <b>edit_other</b>: Edit other profile information.\n\n"
+                
+                "Use these commands to interact with the bot and manage your job search, profile information and search for jobs."
+            )
+            await update.message.reply_text(help_text, parse_mode='HTML')
 
         async def unified_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             if 'job_search_mode' in context.user_data:
@@ -542,9 +570,11 @@ class Command(BaseCommand):
         application = ApplicationBuilder().token(BOT_TOKEN).build()
 
         start_handler = CommandHandler("start", start)
+        help_handler = CommandHandler("help", help_command)
         base_message_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, unified_message_handler)
         base_handlers = [
             start_handler,
+            help_handler,
             base_message_handler,
         ]
 
