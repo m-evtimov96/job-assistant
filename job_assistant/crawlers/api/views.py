@@ -88,7 +88,7 @@ class GenerateCVView(APIView):
             At the end of the CV paragraphs make another one (about a half page) for a letter of motivation, using both the job ad info and the user profile for it.
             
             User Profile:
-            Name: {profile.bio}
+            Bio: {profile.bio}
             Experience: {profile.work_experience}
             Education: {profile.education}
             Skills: {profile.skills}
