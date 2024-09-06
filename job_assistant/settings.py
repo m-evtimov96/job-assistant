@@ -150,3 +150,13 @@ REST_FRAMEWORK = {
 
 BOT_TOKEN = env("BOT_API_KEY")
 OPENAI_API_KEY = env("OPENAI_API_KEY")
+
+# Celery
+# https://docs.celeryq.dev/en/stable/django/first-steps-with-django.html
+
+CELERY_TIMEZONE = "Bulgaria/Sofia"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BROKER_TRANSPORT = "redis"
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+
