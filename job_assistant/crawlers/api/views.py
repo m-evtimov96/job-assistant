@@ -22,7 +22,7 @@ class JobAdViewSet(ReadOnlyModelViewSet):
     serializer_class = JobAdSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = JobAdFilterSet
-    search_fields = ["title"] #This searches with AND, maybe change to OR ? and maybe add body field ?
+    search_fields = ["title", "body"] #This searches with AND, maybe change to OR ?
     ordering = ["-date"]
 
 
