@@ -1,53 +1,9 @@
 from django.core.management.base import BaseCommand
-from job_assistant.crawlers.models import JobAd, Workplace
-from job_assistant.crawlers.scraper.scraper.spiders.dev_bg import DevBgSpider
-from job_assistant.crawlers.utils import handle_categories, handle_technologies, clean_body
-from scrapy import signals
-from scrapy.crawler import CrawlerProcess
-from scrapy.signalmanager import dispatcher
-from scrapy.utils.project import get_project_settings
-from bleach.sanitizer import Cleaner
-from datetime import datetime, timedelta
+from job_assistant.crawlers.tasks import crawl_job_ads_daily
 
-# Run daily in the morning
 class Command(BaseCommand):
-    help = "Crawl daily JobAds from DevBgSpider."
+    help = "Run the celery task to crawl daily JobAds from DevBgSpider."
 
     def handle(self, *args, **options):
-        results = []
-
-        def crawler_results(signal, sender, item, response, spider):
-            results.append(item)
-
-        dispatcher.connect(crawler_results, signal=signals.item_passed)
-
-        yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y-%m-%d')
-
-        process = CrawlerProcess(get_project_settings())
-        process.crawl(DevBgSpider, from_date=yesterday)
-        process.start()
-
-        cleaner = Cleaner(tags=[], attributes=[], protocols=[], strip=True, strip_comments=True)
-        for result in results:
-            categories = handle_categories(result)
-            technologies = handle_technologies(result)
-            workplace, created = Workplace.objects.get_or_create(name=result.pop("workplace").strip())
-
-            clean_body(result, cleaner)
-
-            ad = JobAd.all_objects.filter(url=result["url"])
-            if ad:
-                ad.update(**result)
-                ad = ad[0]
-                if ad.is_deleted:
-                    ad.restore()
-                ad.categories.clear()
-                ad.technologies.clear()
-                ad.workplace = workplace
-                ad.save()
-            else:
-                ad = JobAd(workplace=workplace, **result)
-                ad.save()
-
-            ad.categories.add(*categories)
-            ad.technologies.add(*technologies)
+        result = crawl_job_ads_daily.delay()
+        self.stdout.write(self.style.SUCCESS(f"Task {result.id} for daily crawling has been triggered successfully."))

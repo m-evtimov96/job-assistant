@@ -154,7 +154,6 @@ OPENAI_API_KEY = env("OPENAI_API_KEY")
 # Celery
 # https://docs.celeryq.dev/en/stable/django/first-steps-with-django.html
 
-CELERY_TIMEZONE = "Bulgaria/Sofia"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_BROKER_TRANSPORT = "redis"
