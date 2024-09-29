@@ -33,7 +33,7 @@ class Command(BaseCommand):
         # Base handlers
         ###############
         async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-            await update.message.reply_text("Welcome! Please use /search, /jobs or /profile to continue.\nUser /help to see all the available commands.")
+            await update.message.reply_text("Welcome! Please use /search, /jobs or /profile to continue.\nUse /help to see all the available commands.")
         
         async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             help_text = (
