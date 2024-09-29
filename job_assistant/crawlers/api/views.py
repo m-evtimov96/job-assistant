@@ -25,12 +25,16 @@ class JobAdViewSet(ReadOnlyModelViewSet):
     search_fields = ["title", "body"] #This searches with AND, maybe change to OR ?
     ordering = ["-date"]
 
+    def get_queryset(self):
+        return super().get_queryset().distinct() #Check if this removes duplicates from the filters correctly
+
 
 class CategoryViewSet(ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     filter_backends = [MultiKeywordNameSearchFilter]
     ordering = ["id"]
+
 
 class TechnologyViewSet(ReadOnlyModelViewSet):
     queryset = Technology.objects.all()
